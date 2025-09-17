@@ -1,0 +1,41 @@
+/* Static UI overrides: hide mic, tools dropdown, and share buttons */
+
+/* Microphone button */
+#audio-recorder,
+button#audio-recorder,
+button[aria-label*="mic" i],
+button[aria-label*="microphone" i],
+button[title*="mic" i] {
+  display: none !important;
+}
+
+/* Tools dropdown button in input row */
+#tools-dropdown-button,
+button#tools-dropdown-button,
+button[aria-label*="tools" i],
+[aria-label="Tools Options" i] {
+  display: none !important;
+}
+
+/* Export & Share menu button and menu items */
+#export-menu-button,
+button#export-menu-button,
+[aria-label="Export options" i],
+button[aria-label*="share" i],
+[role="menuitem"][aria-label*="share" i] {
+  display: none !important;
+}
+
+/* Temporary Chat toggle in header */
+button[aria-label*="temporary" i] {
+  display: none !important;
+}
+
+/* Fork chat controls on messages */
+button[aria-label*="fork" i] {
+  display: none !important;
+}
+
+
+
+

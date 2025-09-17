@@ -12,6 +12,8 @@ import { MarketplaceProvider } from '~/components/Agents/MarketplaceContext';
 import AgentMarketplace from '~/components/Agents/Marketplace';
 import { OAuthSuccess, OAuthError } from '~/components/OAuth';
 import { AuthContextProvider } from '~/hooks/AuthContext';
+import PrivacyPolicy from '~/components/Legal/PrivacyPolicy';
+import TermsOfService from '~/components/Legal/TermsOfService';
 import RouteErrorBoundary from './RouteErrorBoundary';
 import StartupLayout from './Layouts/Startup';
 import LoginLayout from './Layouts/Login';
@@ -126,6 +128,14 @@ export const router = createBrowserRouter(
                   <AgentMarketplace />
                 </MarketplaceProvider>
               ),
+            },
+            {
+              path: 'privacy-policy',
+              element: <PrivacyPolicy />,
+            },
+            {
+              path: 'terms-of-service',
+              element: <TermsOfService />,
             },
           ],
         },

@@ -519,6 +519,7 @@ export const interfaceSchema = z
       .optional(),
     termsOfService: termsOfServiceSchema.optional(),
     customWelcome: z.string().optional(),
+    landingLogo: z.boolean().optional(),
     mcpServers: mcpServersSchema.optional(),
     endpointsMenu: z.boolean().optional(),
     modelSelect: z.boolean().optional(),
@@ -563,6 +564,7 @@ export const interfaceSchema = z
     temporaryChat: true,
     runCode: true,
     webSearch: true,
+    landingLogo: true,
     peoplePicker: {
       users: true,
       groups: true,
