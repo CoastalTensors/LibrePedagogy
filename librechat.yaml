@@ -1,0 +1,79 @@
+# For more information, see the Configuration Guide:
+# https://www.librechat.ai/docs/configuration/librechat_yaml
+
+# Configuration version (required)
+version: 1.2.8
+
+# Cache settings: Set to true to enable caching
+cache: true
+
+# Custom interface configuration
+interface:
+  customWelcome: "Hey {{user.name}}! Welcome to AIMS AI-Assisted Learning"
+  landingLogo: false
+  fileSearch: false
+  webSearch: false
+  runCode: false
+  sidePanel: false
+  presets: false
+  parameters: false
+  multiConvo: false
+  bookmarks: false
+  agents: false
+  prompts: false
+  memories: false
+  temporaryChat: false
+  modelSelect: false
+  privacyPolicy:
+    externalUrl: "/privacy-policy"
+    openNewTab: true
+  termsOfService:
+    externalUrl: "/terms-of-service"
+    openNewTab: true
+  customFooter: ""
+
+# Example Registration Object Structure (optional)
+registration:
+  socialLogins: ["google"]
+  allowedDomains:
+    - "aims.ac.za"
+
+memory:
+  disabled: true
+
+fileStrategy: "local"
+fileConfig:
+  endpoints:
+    OpenRouter:
+      disabled: true # hides file upload / attachments for this endpoint
+
+# Definition of custom endpoints
+endpoints:
+  custom:
+    # OpenRouter Example
+    - name: "OpenRouter"
+      # For `apiKey` and `baseURL`, you can use environment variables that you define.
+      # recommended environment variables:
+      # Known issue: you should not use `OPENROUTER_API_KEY` as it will then override the `openAI` endpoint to use OpenRouter as well.
+      apiKey: "${OPENROUTER_KEY}"
+      baseURL: "https://openrouter.ai/api/v1"
+      models:
+        default: ["google/gemma-3-27b-it"]
+        fetch: false
+      titleConvo: true
+      titleModel: "google/gemma-3-27b-it"
+      # Recommended: Drop the stop parameter from the request as Openrouter models use a variety of stop tokens.
+      dropParams: ["stop"]
+      modelDisplayLabel: "AI Assistant"
+# Model specs to control icon visibility
+# modelSpecs:
+#   enforce: true
+#   prioritize: true
+#   list:
+#     - name: "openrouter-no-icon"
+#       showIconInHeader: false
+#       showIconInMenu: false
+#       default: true
+#       preset:
+#         endpoint: "OpenRouter"
+#         model: "google/gemma-3-27b-it"
