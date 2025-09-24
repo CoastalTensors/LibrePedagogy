@@ -1,7 +1,7 @@
 const crypto = require('crypto');
 const { loadPolicy } = require('~/server/policy');
 const { judgePrompt } = require('~/server/policy/judge');
-const { sendError } = require('~/server/middleware/error');
+const denyRequest = require('~/server/middleware/denyRequest');
 
 /**
   * Middleware that judges the incoming user prompt and blocks it if unsafe.
@@ -11,32 +11,13 @@ const { sendError } = require('~/server/middleware/error');
 async function policyMiddleware(req, res, next) {
   try {
     const policy = loadPolicy();
-    const {
-      text = '',
-      promptPrefix = '',
-      messageId = crypto.randomUUID(),
-      conversationId = crypto.randomUUID(),
-      parentMessageId,
-    } = req.body || {};
+    const { text = '', promptPrefix = '' } = req.body || {};
 
     // Judge the user text
     const result = await judgePrompt({ req, res, userText: text });
 
     if (result.blocked) {
-      return sendError(
-        req,
-        res,
-        {
-          user: req.user.id,
-          sender: 'Assistant',
-          conversationId,
-          messageId: crypto.randomUUID(),
-          parentMessageId: messageId,
-          text: policy.badPromptMessage,
-          error: false,
-          shouldSaveMessage: true,
-        },
-      );
+      return await denyRequest(req, res, policy.badPromptMessage);
     }
 
     // Apply an educational system prefix (idempotently)
