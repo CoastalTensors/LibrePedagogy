@@ -1,7 +1,7 @@
 module.exports = {
   /** Message sent back when a prompt violates policy. Rendered as normal assistant text. */
   badPromptMessage:
-    'I can help with educational topics in a safe and respectful way. Please rephrase your request to focus on learning objectives, constructive discussion, or age-appropriate content.',
+    'I am sorry I cannot answer that. I can help only with educational topics in a safe and respectful way. Please ask something else or rephrase your request to focus on learning objectives, constructive discussion, or age-appropriate content.',
 
   /** System/guide prompt for the judge model to classify the user prompt. */
   judgePrompt: `You are a strict safety and education policy judge for a school-friendly chatbot.

@@ -17,7 +17,14 @@ services:
     - type: bind
       source: ./librechat.yaml
       target: /app/librechat.yaml
-    image: jaroncohen/librepedagogy-api:latest
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: node
+      args:
+        - NPM_CONFIG_CACHE=/tmp/.npm-cache
+        - NPM_CONFIG_FUND=false
+        - NPM_CONFIG_AUDIT=false
 #     image: ghcr.io/danny-avila/librechat:latest
     # environment:
     #   - MONGO_URI=mongodb://user:gachE2-dydbob-puztuz@mongodb:27017/LibreChat

@@ -33,6 +33,7 @@ async function policyMiddleware(req, res, next) {
           messageId: crypto.randomUUID(),
           parentMessageId: messageId,
           text: policy.badPromptMessage,
+          error: false,
           shouldSaveMessage: true,
         },
       );
