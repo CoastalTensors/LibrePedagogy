@@ -17,6 +17,7 @@ const { getRoleByName } = require('~/models/Role');
 const router = express.Router();
 
 router.use(moderateText);
+const policyMiddleware = require('~/server/middleware/policy');
 
 const checkAgentAccess = generateCheckAccess({
   permissionType: PermissionTypes.AGENTS,
@@ -33,6 +34,7 @@ router.use(checkAgentResourceAccess);
 router.use(validateConvoAccess);
 router.use(buildEndpointOption);
 router.use(setHeaders);
+router.use(policyMiddleware);
 
 const controller = async (req, res, next) => {
   await AgentController(req, res, next, initializeClient, addTitle);

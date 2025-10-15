@@ -55,6 +55,7 @@ const denyRequest = async (req, res, errorMessage) => {
     conversationId,
     parentMessageId: userMessage.messageId,
     text: responseText,
+    error: false,
     shouldSaveMessage,
     user: req.user.id,
   });

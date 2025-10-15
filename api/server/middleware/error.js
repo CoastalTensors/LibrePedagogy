@@ -31,13 +31,14 @@ const sendError = async (req, res, options, callback) => {
     shouldSaveMessage,
     ...rest
   } = options;
+  const isError = options?.error !== undefined ? options.error : true;
   const errorMessage = {
     sender,
     messageId: messageId ?? crypto.randomUUID(),
     conversationId,
     parentMessageId,
     unfinished: false,
-    error: true,
+    error: isError,
     final: true,
     text,
     isCreatedByUser: false,
