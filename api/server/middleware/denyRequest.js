@@ -5,6 +5,22 @@ const { sendError } = require('~/server/middleware/error');
 const { saveMessage } = require('~/models');
 
 /**
+ * Logger helper for deny request
+ */
+function logDeny(level, message, data = {}) {
+  const prefix = '[DENY]';
+  const logData = Object.keys(data).length > 0 ? JSON.stringify(data, null, 2) : '';
+
+  if (level === 'error') {
+    console.error(`${prefix} ${message}`, logData);
+  } else if (level === 'warn') {
+    console.warn(`${prefix} ${message}`, logData);
+  } else {
+    console.log(`${prefix} ${message}`, logData);
+  }
+}
+
+/**
  * Denies a request by sending an error message and optionally saves the user's message.
  *
  * @async
@@ -29,17 +45,28 @@ const denyRequest = async (req, res, errorMessage) => {
   const { messageId, conversationId: _convoId, parentMessageId, text } = req.body;
   const conversationId = _convoId ?? crypto.randomUUID();
 
+  // Always treat as non-error to keep it as part of the conversation
+  const isFirstMessage = !_convoId || !parentMessageId || parentMessageId === Constants.NO_PARENT;
+
+  logDeny('info', 'Denying request', {
+    hasConvoId: !!_convoId,
+    hasParentId: !!parentMessageId,
+    isFirstMessage,
+    textPreview: text.substring(0, 50),
+  });
+
   const userMessage = {
     sender: 'User',
     messageId: messageId ?? crypto.randomUUID(),
-    parentMessageId,
+    parentMessageId: parentMessageId || Constants.NO_PARENT,
     conversationId,
     isCreatedByUser: true,
     text,
   };
   sendEvent(res, { message: userMessage, created: true });
 
-  const shouldSaveMessage = _convoId && parentMessageId && parentMessageId !== Constants.NO_PARENT;
+  // Always save the message to make it part of the conversation
+  const shouldSaveMessage = true;
 
   if (shouldSaveMessage) {
     await saveMessage(
@@ -49,13 +76,20 @@ const denyRequest = async (req, res, errorMessage) => {
     );
   }
 
+  logDeny('info', `Sending denial as conversation message (error=false)`, {
+    conversationId,
+    responsePreview: responseText.substring(0, 50),
+    isFirstMessage,
+  });
+
+  // Always set error: false to make it a normal conversation message
   return await sendError(req, res, {
     sender: getResponseSender(req.body),
     messageId: crypto.randomUUID(),
     conversationId,
     parentMessageId: userMessage.messageId,
     text: responseText,
-    error: false,
+    error: false, // Always false - treat as normal conversation message
     shouldSaveMessage,
     user: req.user.id,
   });

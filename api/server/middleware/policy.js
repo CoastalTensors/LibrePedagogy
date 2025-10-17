@@ -1,7 +1,5 @@
-const crypto = require('crypto');
 const { loadPolicy } = require('~/server/policy');
 const { judgePrompt } = require('~/server/policy/judge');
-const denyRequest = require('~/server/middleware/denyRequest');
 
 /**
  * Logger helper for policy middleware
@@ -20,9 +18,10 @@ function logPolicy(level, message, data = {}) {
 }
 
 /**
-  * Middleware that judges the incoming user prompt and blocks it if unsafe.
-  * - If blocked: sends a normal assistant-like response with policy.badPromptMessage via SSE.
-  * - Otherwise: forwards unchanged user text; an educational system prefix may be added.
+  * Middleware that judges the incoming user prompt.
+  * - If blocked: attaches judge result to req.policyJudgment with blocked=true and canned response
+  * - Otherwise: applies educational system prefix and forwards normally
+  * - Never blocks the request - lets the controller handle creating the conversation properly
  */
 async function policyMiddleware(req, res, next) {
   try {
@@ -35,12 +34,23 @@ async function policyMiddleware(req, res, next) {
     const result = await judgePrompt({ req, res, userText: text });
 
     if (result.blocked) {
-      logPolicy('warn', 'Request BLOCKED by judge', {
+      logPolicy('warn', 'Request BLOCKED by judge - attaching canned response', {
         reason: result.reason,
         categories: result.categories,
         textPreview: text.substring(0, 100),
       });
-      return await denyRequest(req, res, policy.badPromptMessage);
+
+      // Attach the judgment to the request for the controller to handle
+      req.policyJudgment = {
+        blocked: true,
+        reason: result.reason,
+        categories: result.categories,
+        cannedResponse: policy.badPromptMessage,
+      };
+
+      // No need to add educational prefix - we're not calling the LLM
+      // Continue to handlePolicyBlock middleware which will send canned response
+      return next();
     }
 
     logPolicy('info', 'Request ALLOWED by judge', { reason: result.reason });

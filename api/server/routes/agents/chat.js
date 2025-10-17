@@ -18,6 +18,7 @@ const router = express.Router();
 
 router.use(moderateText);
 const policyMiddleware = require('~/server/middleware/policy');
+const handlePolicyBlock = require('~/server/middleware/handlePolicyBlock');
 
 const checkAgentAccess = generateCheckAccess({
   permissionType: PermissionTypes.AGENTS,
@@ -35,6 +36,7 @@ router.use(validateConvoAccess);
 router.use(buildEndpointOption);
 router.use(setHeaders);
 router.use(policyMiddleware);
+router.use(handlePolicyBlock);
 
 const controller = async (req, res, next) => {
   await AgentController(req, res, next, initializeClient, addTitle);
