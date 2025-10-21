@@ -1,5 +1,6 @@
 const { loadPolicy } = require('./index');
 const { CustomOpenAIClient: OpenAI } = require('@librechat/agents');
+const { EModelEndpoint } = require('librechat-data-provider');
 
 /** Local copy of isEnabled to avoid module-alias requirements during tests */
 function isEnabled(value) {
@@ -23,25 +24,106 @@ function logJudge(level, message, data = {}) {
 }
 
 /**
- * Build a minimal OpenAI-compatible client using the same endpoint as the user's request.
- * Falls back to OpenAI if no endpoint is configured.
+ * Build a client using the configured endpoint or user's endpoint.
+ * Properly handles Google, custom, and OpenAI endpoints.
  * @param {ServerRequest} req
  */
-function getJudgeLLM(req) {
+async function getJudgeLLM(req) {
   const { getCustomEndpointConfig } = require('@librechat/api');
-  const { extractEnvVariable, envVarRegex } = require('librechat-data-provider');
+  const { extractEnvVariable, envVarRegex, AuthKeys } = require('librechat-data-provider');
 
   const appConfig = req?.config || {};
-  const endpoint = req?.body?.endpoint;
+
+  // Use POLICY_JUDGE_ENDPOINT if configured, otherwise use user's endpoint
+  const targetEndpoint = process.env.POLICY_JUDGE_ENDPOINT || req?.body?.endpoint;
+  const configuredModel = process.env.POLICY_JUDGE_MODEL || undefined;
+
+  logJudge('info', `Target endpoint: ${targetEndpoint || 'none (defaulting to OpenAI)'}`);
+
+  // Handle Google endpoint using proper GoogleClient
+  if (targetEndpoint === EModelEndpoint.google || targetEndpoint === 'google') {
+    return await getGoogleJudgeLLM(req, appConfig, configuredModel);
+  }
+
+  // Handle custom/OpenRouter endpoints with OpenAI-compatible API
+  return getOpenAICompatibleJudgeLLM(req, appConfig, targetEndpoint, configuredModel);
+}
+
+/**
+ * Create a Google client for judge using the same infrastructure as chat
+ * @param {ServerRequest} req
+ * @param {AppConfig} appConfig
+ * @param {string} configuredModel
+ */
+async function getGoogleJudgeLLM(req, appConfig, configuredModel) {
+  const { AuthKeys } = require('librechat-data-provider');
+  const { GoogleClient } = require('~/app');
+
+  const GOOGLE_KEY = process.env.GOOGLE_KEY;
+
+  if (!GOOGLE_KEY || GOOGLE_KEY === 'user_provided') {
+    logJudge('warn', 'Google endpoint selected but no valid GOOGLE_KEY found');
+    return null;
+  }
+
+  // Get model from config if not explicitly set
+  let model = configuredModel;
+  if (!model) {
+    const googleConfig = appConfig?.endpoints?.[EModelEndpoint.google];
+    const models = googleConfig?.models?.default;
+    if (Array.isArray(models) && models.length > 0) {
+      model = models[0];
+    } else {
+      // Default to a fast, cheap model for judging
+      model = 'gemini-2.0-flash-lite';
+    }
+  }
+
+  const credentials = {
+    [AuthKeys.GOOGLE_API_KEY]: GOOGLE_KEY,
+  };
+
+  const clientOptions = {
+    req,
+    res: req.res,
+    modelOptions: {
+      model,
+    },
+  };
+
+  try {
+    const client = new GoogleClient(credentials, clientOptions);
+    logJudge('info', `Using Google client`, { model });
+
+    return {
+      client,
+      model,
+      endpoint: EModelEndpoint.google,
+      isGoogle: true,
+    };
+  } catch (error) {
+    logJudge('error', 'Failed to create Google client', { error: error.message });
+    return null;
+  }
+}
+
+/**
+ * Create OpenAI-compatible client for judge (OpenRouter, custom endpoints, OpenAI)
+ * @param {ServerRequest} req
+ * @param {AppConfig} appConfig
+ * @param {string} endpoint
+ * @param {string} configuredModel
+ */
+function getOpenAICompatibleJudgeLLM(req, appConfig, endpoint, configuredModel) {
+  const { extractEnvVariable, envVarRegex } = require('librechat-data-provider');
+
   let baseURL = 'https://api.openai.com/v1';
   let apiKey = process.env.OPENAI_API_KEY;
   let defaultHeaders = undefined;
-  let configuredModel = undefined;
+  let model = configuredModel;
   let supportsJSONFormat = false;
 
-  logJudge('info', `Endpoint from request: ${endpoint || 'none'}`);
-
-  // Try to use the same endpoint config as the user's request
+  // Try to use custom endpoint config
   try {
     if (endpoint && endpoint !== 'openAI' && endpoint !== 'azureOpenAI') {
       const endpointConfig = getCustomEndpointConfig({ endpoint, appConfig });
@@ -58,10 +140,12 @@ function getJudgeLLM(req) {
           baseURL = CUSTOM_BASE_URL;
         }
 
-        // Extract configured model from endpoint
-        const models = endpointConfig?.models?.default;
-        if (Array.isArray(models) && models.length > 0) {
-          configuredModel = models[0];
+        // Extract configured model from endpoint if not explicitly set
+        if (!model) {
+          const models = endpointConfig?.models?.default;
+          if (Array.isArray(models) && models.length > 0) {
+            model = models[0];
+          }
         }
 
         // OpenRouter and most custom endpoints support JSON format
@@ -80,7 +164,7 @@ function getJudgeLLM(req) {
 
         logJudge('info', `Using custom endpoint config: ${endpoint}`, {
           baseURL,
-          configuredModel,
+          model,
         });
       }
     }
@@ -101,7 +185,13 @@ function getJudgeLLM(req) {
   }
 
   const openai = new OpenAI({ apiKey, ...opts });
-  return { openai, configuredModel, supportsJSONFormat };
+  return {
+    client: openai,
+    model,
+    endpoint: endpoint || 'openAI',
+    supportsJSONFormat,
+    isGoogle: false,
+  };
 }
 
 /**
@@ -128,34 +218,63 @@ async function judgePrompt({ req, res, userText }) {
 
   // Attempt LLM judge if available (env keys often required). If it fails, default to allow.
   try {
-    const result = getJudgeLLM(req);
+    const result = await getJudgeLLM(req);
     if (!result) {
       logJudge('warn', 'LLM unavailable - no valid API key found');
       return { blocked: false, categories: [], reason: 'llm_unavailable', rewrite: null };
     }
-    const { openai, configuredModel, supportsJSONFormat } = result;
 
+    const { client, model, isGoogle, supportsJSONFormat } = result;
     const system = policy.judgePrompt;
     const prompt = `USER_PROMPT:\n${userText}`;
-    const model = req?.body?.model || configuredModel || 'gpt-4o-mini';
 
-    logJudge('info', `Using model: ${model}`);
+    logJudge('info', `Using model: ${model} (${isGoogle ? 'Google' : 'OpenAI-compatible'})`);
 
-    const params = {
-      model,
-      messages: [
-        { role: 'system', content: system },
-        { role: 'user', content: prompt },
-      ],
-      max_tokens: 512,
-      temperature: 0,
-    };
-    if (supportsJSONFormat) {
-      params.response_format = { type: 'json_object' };
+    let content;
+
+    // Handle Google client differently
+    if (isGoogle) {
+      // Build payload for Google (it expects a specific format)
+      const payload = [
+        {
+          role: 'user',
+          parts: [{ text: `${system}\n\n${prompt}` }],
+        },
+      ];
+
+      client.setOptions({
+        modelOptions: {
+          model,
+          maxOutputTokens: 512,
+          temperature: 0,
+        },
+      });
+
+      // Send message to Google with required options
+      const abortController = new AbortController();
+      const response = await client.sendCompletion(payload, {
+        abortController,
+        onProgress: () => {}, // No-op progress handler
+      });
+      content = response || '';
+    } else {
+      // OpenAI-compatible client
+      const params = {
+        model,
+        messages: [
+          { role: 'system', content: system },
+          { role: 'user', content: prompt },
+        ],
+        max_tokens: 512,
+        temperature: 0,
+      };
+      if (supportsJSONFormat) {
+        params.response_format = { type: 'json_object' };
+      }
+      const completion = await client.chat.completions.create(params);
+      content = completion?.choices?.[0]?.message?.content ?? '';
     }
-    const completion = await openai.chat.completions.create(params);
 
-    const content = completion?.choices?.[0]?.message?.content ?? '';
     logJudge('info', `LLM raw response: ${content.substring(0, 200)}${content.length > 200 ? '...' : ''}`);
 
     // Try direct JSON parse

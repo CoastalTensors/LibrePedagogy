@@ -44,36 +44,33 @@ memory:
 fileStrategy: "local"
 fileConfig:
   endpoints:
+    google:
+      disabled: true
     OpenRouter:
       disabled: true # hides file upload / attachments for this endpoint
 
-# Definition of custom endpoints
+# Definition of endpoints
 endpoints:
-  custom:
-    # OpenRouter Example
-    - name: "OpenRouter"
-      # For `apiKey` and `baseURL`, you can use environment variables that you define.
-      # recommended environment variables:
-      # Known issue: you should not use `OPENROUTER_API_KEY` as it will then override the `openAI` endpoint to use OpenRouter as well.
-      apiKey: "${OPENROUTER_KEY}"
-      baseURL: "https://openrouter.ai/api/v1"
-      models:
-        default: ["google/gemma-3-27b-it"]
-        fetch: false
-      titleConvo: true
-      titleModel: "google/gemma-3-27b-it"
-      # Recommended: Drop the stop parameter from the request as Openrouter models use a variety of stop tokens.
-      dropParams: ["stop"]
-      modelDisplayLabel: "AI Assistant"
-# Model specs to control icon visibility
-# modelSpecs:
-#   enforce: true
-#   prioritize: true
-#   list:
-#     - name: "openrouter-no-icon"
-#       showIconInHeader: false
-#       showIconInMenu: false
-#       default: true
-#       preset:
-#         endpoint: "OpenRouter"
-#         model: "google/gemma-3-27b-it"
+  # Google Gemini endpoint configuration
+  google:
+    models:
+      default: ["gemini-2.5-pro"]
+      fetch: false
+    titleConvo: true
+    titleModel: "gemini-2.0-flash-lite"
+
+# Model specs to control display labels and visibility
+modelSpecs:
+  enforce: true
+  prioritize: true
+  list:
+    - name: "ai-assistant"
+      label: "AI Assistant"
+      description: "Your AI Learning Assistant"
+      showIconInHeader: false
+      showIconInMenu: false
+      default: true
+      preset:
+        endpoint: "google"
+        model: "gemini-2.5-pro"
+        modelLabel: "AI Assistant"
