@@ -53,3 +53,6 @@ steps:
 # This sets a timeout for the *entire build process* (not the app).
 # 1600 seconds is about 26 minutes, which is plenty of time.
 timeout: "1600s"
+
+options:
+  logging: CLOUD_LOGGING_ONLY
