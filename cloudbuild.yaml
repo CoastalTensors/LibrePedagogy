@@ -1,7 +1,27 @@
 # This is a list of steps to run, in order.
 steps:
-  # This first (and only) step uses Google's official cloud-sdk image
-  # which already has all the 'gcloud' commands we need.
+  # Step 1: Build the Docker image
+  # This uses the Docker builder provided by Cloud Build.
+  # -t specifies the tag for the image, using Artifact Registry format.
+  # $PROJECT_ID and $SHORT_SHA are built-in Cloud Build variables.
+  # '.' tells Docker to build using the Dockerfile in the current directory (repo root).
+  - name: "gcr.io/cloud-builders/docker"
+    args:
+      - "build"
+      - "-t"
+      - "africa-south1-docker.pkg.dev/${PROJECT_ID}/librechat-builds/librechat-api:$SHORT_SHA"
+      - "."
+    id: "Build"
+
+  # Step 2: Push the image to your Artifact Registry
+  # This pushes the image tagged in the previous step.
+  - name: "gcr.io/cloud-builders/docker"
+    args:
+      - "push"
+      - "africa-south1-docker.pkg.dev/${PROJECT_ID}/librechat-builds/librechat-api:$SHORT_SHA"
+    id: "Push"
+
+  # Step 3: Deploy the image to Cloud Run
   - name: "gcr.io/google.com/cloudsdktool/cloud-sdk"
 
     # This tells the step to run the 'gcloud' command.
@@ -16,8 +36,8 @@ steps:
 
       # This tells Cloud Run to not build an image, but to pull
       # the official, pre-built image from GitHub's container registry.
-      - "--image=africa-south1-docker.pkg.dev/jaron-project/github-proxy/danny-avila/librechat-api:latest"
-
+      # - "--image=africa-south1-docker.pkg.dev/jaron-project/github-proxy/danny-avila/librechat-api:latest"
+      - "--image=africa-south1-docker.pkg.dev/${PROJECT_ID}/librechat-builds/librechat-api:$SHORT_SHA" # Use the image just built
       - "--region=africa-south1" # IMPORTANT: Change this to your preferred region (e.g., us-east1).
       - "--platform=managed" # Standard for Cloud Run.
       - "--allow-unauthenticated" # This makes your chat URL public.
@@ -50,9 +70,14 @@ steps:
       # - "--set-secrets=OPENAI_API_KEY=OPENAI_API_KEY:latest"
       # - '--set-secrets=GOOGLE_API_KEY=GOOGLE_API_KEY:latest' # Uncomment if you added this
 
+# This top-level 'images' list tells Cloud Build to push the specified image
+# after all build steps are successful. It's slightly redundant with the explicit
+# 'docker push' step but is good practice.
+images:
+  - "africa-south1-docker.pkg.dev/${PROJECT_ID}/librechat-builds/librechat-api:$SHORT_SHA"
+
 # This sets a timeout for the *entire build process* (not the app).
-# 1600 seconds is about 26 minutes, which is plenty of time.
-timeout: "1600s"
+timeout: "2000s"
 
 options:
   logging: CLOUD_LOGGING_ONLY
