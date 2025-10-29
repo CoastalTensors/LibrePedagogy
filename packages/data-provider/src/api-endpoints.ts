@@ -377,3 +377,12 @@ export const getEffectivePermissions = (resourceType: ResourceType, resourceId: 
 // SharePoint Graph API Token
 export const graphToken = (scopes: string) =>
   `${BASE_URL}/api/auth/graph-token?scopes=${encodeURIComponent(scopes)}`;
+
+/* Admin */
+export const adminStats = () => `${BASE_URL}/api/admin/stats`;
+export const adminUsers = (params: Record<string, unknown>) =>
+  `${BASE_URL}/api/admin/users${buildQuery(params)}`;
+export const adminUserDetails = (userId: string) => `${BASE_URL}/api/admin/users/${userId}`;
+export const adminUpdateUserRole = (userId: string) => `${BASE_URL}/api/admin/users/${userId}/role`;
+export const adminTrends = (params: Record<string, unknown>) =>
+  `${BASE_URL}/api/admin/trends${buildQuery(params)}`;

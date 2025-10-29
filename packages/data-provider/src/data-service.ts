@@ -956,3 +956,88 @@ export function getGraphApiToken(params: q.GraphTokenParams): Promise<q.GraphTok
 export function getDomainServerBaseUrl(): string {
   return `${endpoints.apiBaseUrl()}/api`;
 }
+
+/* Admin */
+export interface AdminStatsResponse {
+  totalUsers: number;
+  adminUsers: number;
+  regularUsers: number;
+  newUsersThisWeek: number;
+  newUsersThisMonth: number;
+  verifiedUsers: number;
+  unverifiedUsers: number;
+  totalConversations: number;
+  totalMessages: number;
+  averageMessagesPerUser: number;
+}
+
+export interface AdminUser {
+  _id: string;
+  email: string;
+  name: string;
+  username: string;
+  avatar?: string;
+  role: string;
+  provider: string;
+  emailVerified: boolean;
+  createdAt: string;
+}
+
+export interface AdminUsersResponse {
+  users: AdminUser[];
+  pagination: {
+    currentPage: number;
+    totalPages: number;
+    totalCount: number;
+    limit: number;
+    hasNextPage: boolean;
+    hasPreviousPage: boolean;
+  };
+}
+
+export interface AdminUserDetailsResponse extends AdminUser {
+  stats: {
+    conversationCount: number;
+    messageCount: number;
+    lastActivity: string | null;
+  };
+}
+
+export interface AdminUpdateUserRoleRequest {
+  role: 'ADMIN' | 'USER';
+}
+
+export interface AdminTrendDataPoint {
+  date: string;
+  count: number;
+}
+
+export function getAdminStats(): Promise<AdminStatsResponse> {
+  return request.get(endpoints.adminStats());
+}
+
+export function getAdminUsers(params: {
+  page?: number;
+  limit?: number;
+  search?: string;
+  role?: string;
+  sortBy?: string;
+  sortOrder?: string;
+}): Promise<AdminUsersResponse> {
+  return request.get(endpoints.adminUsers(params));
+}
+
+export function getAdminUserDetails(userId: string): Promise<AdminUserDetailsResponse> {
+  return request.get(endpoints.adminUserDetails(userId));
+}
+
+export function updateAdminUserRole(
+  userId: string,
+  payload: AdminUpdateUserRoleRequest,
+): Promise<{ message: string; user: AdminUser }> {
+  return request.patch(endpoints.adminUpdateUserRole(userId), payload);
+}
+
+export function getAdminTrends(params: { days?: number }): Promise<AdminTrendDataPoint[]> {
+  return request.get(endpoints.adminTrends(params));
+}
