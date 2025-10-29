@@ -16,7 +16,7 @@ steps:
 
       # This tells Cloud Run to not build an image, but to pull
       # the official, pre-built image from GitHub's container registry.
-      - "--image=ghcr.io/danny-avila/librechat-api:latest"
+      - "--image=africa-south1-docker.pkg.dev/jaron-project/github-proxy/danny-avila/librechat-api:latest"
 
       - "--region=africa-south1" # IMPORTANT: Change this to your preferred region (e.g., us-east1).
       - "--platform=managed" # Standard for Cloud Run.
