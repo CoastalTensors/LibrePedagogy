@@ -1,0 +1,55 @@
+# This is a list of steps to run, in order.
+steps:
+  # This first (and only) step uses Google's official cloud-sdk image
+  # which already has all the 'gcloud' commands we need.
+  - name: "gcr.io/google.com/cloudsdktool/cloud-sdk"
+
+    # This tells the step to run the 'gcloud' command.
+    entrypoint: "gcloud"
+
+    # These are all the arguments we pass to the 'gcloud' command.
+    # This is the exact same command you would run locally, but automated.
+    args:
+      - "run"
+      - "deploy"
+      - "librechat" # This will be the name of your Cloud Run service.
+
+      # This tells Cloud Run to not build an image, but to pull
+      # the official, pre-built image from GitHub's container registry.
+      - "--image=ghcr.io/danny-avila/librechat-api:latest"
+
+      - "--region=africa-south1-b" # IMPORTANT: Change this to your preferred region (e.g., us-east1).
+      - "--platform=managed" # Standard for Cloud Run.
+      - "--allow-unauthenticated" # This makes your chat URL public.
+
+      # --- App Configuration ---
+      - "--port=3080" # LibreChat's app runs on port 3080.
+      - "--timeout=3600" # 1 hour (3600s). Good for long AI requests.
+      - "--concurrency=4" # Recommended to keep low for this type of app.
+
+      # --- Scaling & Cost ---
+      - "--min-instances=0" # 0 is cheapest (it can "sleep"). Use 1 for no "cold starts".
+      - "--max-instances=2" # Scales up to 2 instances if busy.
+      - "--cpu=1" # 1 vCPU.
+      - "--memory=2Gi" # 2GB of RAM. You can adjust this later if needed.
+
+      # --- This is the magic from Step 2 ---
+      # This maps your Secret Manager secrets to environment variables
+      # inside the running application.
+      #
+      # FORMAT: '--set-secrets=ENVIRONMENT_VARIABLE_NAME=SECRET_NAME:latest'
+      #
+      # We are using the *same name* for both, which is clear and simple.
+      - "--set-secrets=MONGO_URI=MONGO_URI:latest"
+      - "--set-secrets=CREDS_IV=CREDS_IV:latest"
+      - "--set-secrets=CREDS_KEY=CREDS_KEY:latest"
+      - "--set-secrets=JWT_SECRET=JWT_SECRET:latest"
+      - "--set-secrets=JWT_REFRESH_SECRET=JWT_REFRESH_SECRET:latest"
+
+      # --- Add your API keys here in the same format ---
+      # - "--set-secrets=OPENAI_API_KEY=OPENAI_API_KEY:latest"
+      # - '--set-secrets=GOOGLE_API_KEY=GOOGLE_API_KEY:latest' # Uncomment if you added this
+
+# This sets a timeout for the *entire build process* (not the app).
+# 1600 seconds is about 26 minutes, which is plenty of time.
+timeout: "1600s"
