@@ -1,0 +1,102 @@
+# This is a list of steps to run, in order.
+steps:
+  # Step 1: Build the Docker image
+  # This uses the Docker builder provided by Cloud Build.
+  # -t specifies the tag for the image, using Artifact Registry format.
+  # $PROJECT_ID and $SHORT_SHA are built-in Cloud Build variables.
+  # '.' tells Docker to build using the Dockerfile in the current directory (repo root).
+  - name: "gcr.io/cloud-builders/docker"
+    args:
+      - "build"
+      - "-t"
+      - "africa-south1-docker.pkg.dev/${PROJECT_ID}/librechat-builds/librechat-api:$SHORT_SHA"
+      - "."
+    id: "Build"
+
+  # Step 2: Push the image to your Artifact Registry
+  # This pushes the image tagged in the previous step.
+  - name: "gcr.io/cloud-builders/docker"
+    args:
+      - "push"
+      - "africa-south1-docker.pkg.dev/${PROJECT_ID}/librechat-builds/librechat-api:$SHORT_SHA"
+    id: "Push"
+
+  # Step 3: Deploy the image to Cloud Run
+  - name: "gcr.io/google.com/cloudsdktool/cloud-sdk"
+
+    # This tells the step to run the 'gcloud' command.
+    entrypoint: "gcloud"
+
+    # These are all the arguments we pass to the 'gcloud' command.
+    # This is the exact same command you would run locally, but automated.
+    args:
+      - "run"
+      - "deploy"
+      - "librechat" # This will be the name of your Cloud Run service.
+
+      # This tells Cloud Run to not build an image, but to pull
+      # the official, pre-built image from GitHub's container registry.
+      # - "--image=africa-south1-docker.pkg.dev/jaron-project/github-proxy/danny-avila/librechat-api:latest"
+      - "--image=africa-south1-docker.pkg.dev/${PROJECT_ID}/librechat-builds/librechat-api:$SHORT_SHA" # Use the image just built
+      - "--region=africa-south1" # IMPORTANT: Change this to your preferred region (e.g., us-east1).
+      - "--platform=managed" # Standard for Cloud Run.
+      - "--allow-unauthenticated" # This makes your chat URL public.
+
+      # --- App Configuration ---
+      - "--port=3080" # LibreChat's app runs on port 3080.
+      - "--timeout=3600" # 1 hour (3600s). Good for long AI requests.
+      - "--concurrency=4" # Recommended to keep low for this type of app.
+
+      # --- Scaling & Cost ---
+      - "--min-instances=0" # 0 is cheapest (it can "sleep"). Use 1 for no "cold starts".
+      - "--max-instances=2" # Scales up to 2 instances if busy.
+      - "--cpu=1" # 1 vCPU.
+      - "--memory=2Gi" # 2GB of RAM. You can adjust this later if needed.
+
+      # --- This is the magic from Step 2 ---
+      # This maps your Secret Manager secrets to environment variables
+      # inside the running application.
+      #
+      # FORMAT: '--set-secrets=ENVIRONMENT_VARIABLE_NAME=SECRET_NAME:latest'
+      #
+      # We are using the *same name* for both, which is clear and simple.
+      - "--set-secrets=MONGO_URI=MONGO_URI:latest"
+      - "--set-secrets=CREDS_IV=CREDS_IV:latest"
+      - "--set-secrets=CREDS_KEY=CREDS_KEY:latest"
+      - "--set-secrets=JWT_SECRET=JWT_SECRET:latest"
+      - "--set-secrets=JWT_REFRESH_SECRET=JWT_REFRESH_SECRET:latest"
+
+      # --- Add your API keys here in the same format ---
+      # - "--set-secrets=OPENAI_API_KEY=OPENAI_API_KEY:latest"
+      - "--set-env-vars=ENDPOINTS=google"
+      - "--set-secrets=GOOGLE_KEY=GOOGLE_KEY:latest"
+      - "--set-env-vars=GOOGLE_MODELS=gemini-2.5-pro"
+      - "--set-env-vars=GOOGLE_SAFETY_SEXUALLY_EXPLICIT=BLOCK_ONLY_HIGH"
+      - "--set-env-vars=GOOGLE_SAFETY_HATE_SPEECH=BLOCK_ONLY_HIGH"
+      - "--set-env-vars=GOOGLE_SAFETY_HARASSMENT=BLOCK_ONLY_HIGH"
+      - "--set-env-vars=GOOGLE_SAFETY_DANGEROUS_CONTENT=BLOCK_ONLY_HIGH"
+      - "--set-env-vars=GOOGLE_SAFETY_CIVIC_INTEGRITY=BLOCK_ONLY_HIGH"
+
+      - "--set-env-vars=HOST=0.0.0.0"
+      - "--set-env-vars=DOMAIN_CLIENT=https://librechat-211210773070.africa-south1.run.app"
+      - "--set-env-vars=DOMAIN_SERVER=https://librechat-211210773070.africa-south1.run.app"
+      - "--set-env-vars=ALLOW_REGISTRATION=true" # Example: disable public signup
+      - "--set-env-vars=ALLOW_EMAIL_LOGIN=true"
+      - "--set-env-vars=APP_TITLE=AIMS AI-Assisted Learning" # Example: set a custom title
+      - "--set-env-vars=CUSTOM_FOOTER=''"
+
+      - "--set-env-vars=POLICY_JUDGE_ENABLED=true"
+      - "--set-env-vars=POLICY_JUDGE_ENDPOINT=google"
+      - "--set-env-vars=POLICY_JUDGE_MODEL=gemini-2.0-flash-lite"
+
+# This top-level 'images' list tells Cloud Build to push the specified image
+# after all build steps are successful. It's slightly redundant with the explicit
+# 'docker push' step but is good practice.
+images:
+  - "africa-south1-docker.pkg.dev/${PROJECT_ID}/librechat-builds/librechat-api:$SHORT_SHA"
+
+# This sets a timeout for the *entire build process* (not the app).
+timeout: "2000s"
+
+options:
+  logging: CLOUD_LOGGING_ONLY
