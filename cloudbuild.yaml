@@ -59,6 +59,9 @@ steps:
       #
       # FORMAT: '--set-secrets=ENVIRONMENT_VARIABLE_NAME=SECRET_NAME:latest'
       #
+
+      - "--set-env-vars=CONFIG_PATH='./librechat.yaml'"
+
       # We are using the *same name* for both, which is clear and simple.
       - "--set-secrets=MONGO_URI=MONGO_URI:latest"
       - "--set-secrets=CREDS_IV=CREDS_IV:latest"
