@@ -44,6 +44,8 @@ RUN \
     npm prune --production; \
     npm cache clean --force
 
+COPY librechat.yaml /app/librechat.yaml
+
 # Node API setup
 EXPOSE 3080
 ENV HOST=0.0.0.0
