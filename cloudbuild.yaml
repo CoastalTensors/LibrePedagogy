@@ -9,7 +9,7 @@ steps:
     args:
       - "build"
       - "-t"
-      - "africa-south1-docker.pkg.dev/${PROJECT_ID}/librechat-builds/librechat-api:$SHORT_SHA"
+      - "us-central1-docker.pkg.dev/${PROJECT_ID}/librechat-builds/librechat-api:$SHORT_SHA"
       - "."
     id: "Build"
 
@@ -18,7 +18,7 @@ steps:
   - name: "gcr.io/cloud-builders/docker"
     args:
       - "push"
-      - "africa-south1-docker.pkg.dev/${PROJECT_ID}/librechat-builds/librechat-api:$SHORT_SHA"
+      - "us-central1-docker.pkg.dev/${PROJECT_ID}/librechat-builds/librechat-api:$SHORT_SHA"
     id: "Push"
 
   # Step 3: Deploy the image to Cloud Run
@@ -37,8 +37,8 @@ steps:
       # This tells Cloud Run to not build an image, but to pull
       # the official, pre-built image from GitHub's container registry.
       # - "--image=africa-south1-docker.pkg.dev/jaron-project/github-proxy/danny-avila/librechat-api:latest"
-      - "--image=africa-south1-docker.pkg.dev/${PROJECT_ID}/librechat-builds/librechat-api:$SHORT_SHA" # Use the image just built
-      - "--region=africa-south1" # IMPORTANT: Change this to your preferred region (e.g., us-east1).
+      - "--image=us-central1-docker.pkg.dev/${PROJECT_ID}/librechat-builds/librechat-api:$SHORT_SHA" # Use the image just built
+      - "--region=us-central1" # IMPORTANT: Change this to your preferred region (e.g., us-east1).
       - "--platform=managed" # Standard for Cloud Run.
       - "--allow-unauthenticated" # This makes your chat URL public.
 
@@ -81,8 +81,8 @@ steps:
       - "--set-env-vars=GOOGLE_SAFETY_CIVIC_INTEGRITY=BLOCK_ONLY_HIGH"
 
       - "--set-env-vars=HOST=0.0.0.0"
-      - "--set-env-vars=DOMAIN_CLIENT=https://librechat-211210773070.africa-south1.run.app"
-      - "--set-env-vars=DOMAIN_SERVER=https://librechat-211210773070.africa-south1.run.app"
+      - "--set-env-vars=DOMAIN_CLIENT=https://librechat-211210773070.us-central1.run.app"
+      - "--set-env-vars=DOMAIN_SERVER=https://librechat-211210773070.us-central1.run.app"
       - "--set-env-vars=ALLOW_REGISTRATION=true" # Example: disable public signup
       - "--set-env-vars=ALLOW_EMAIL_LOGIN=true"
       - "--set-env-vars=APP_TITLE=AIMS AI-Assisted Learning" # Example: set a custom title
@@ -96,7 +96,7 @@ steps:
 # after all build steps are successful. It's slightly redundant with the explicit
 # 'docker push' step but is good practice.
 images:
-  - "africa-south1-docker.pkg.dev/${PROJECT_ID}/librechat-builds/librechat-api:$SHORT_SHA"
+  - "us-central1-docker.pkg.dev/${PROJECT_ID}/librechat-builds/librechat-api:$SHORT_SHA"
 
 # This sets a timeout for the *entire build process* (not the app).
 timeout: "2000s"
