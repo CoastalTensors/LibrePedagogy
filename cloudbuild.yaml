@@ -81,12 +81,20 @@ steps:
       - "--set-env-vars=GOOGLE_SAFETY_CIVIC_INTEGRITY=BLOCK_ONLY_HIGH"
 
       - "--set-env-vars=HOST=0.0.0.0"
-      - "--set-env-vars=DOMAIN_CLIENT=https://librechat-211210773070.us-central1.run.app"
-      - "--set-env-vars=DOMAIN_SERVER=https://librechat-211210773070.us-central1.run.app"
+      - "--set-env-vars=DOMAIN_CLIENT=https://chat2.jaroncohen.com"
+      - "--set-env-vars=DOMAIN_SERVER=https://chat2.jaroncohen.com"
       - "--set-env-vars=ALLOW_REGISTRATION=true" # Example: disable public signup
       - "--set-env-vars=ALLOW_EMAIL_LOGIN=true"
+      - "--set-env-vars=ALLOW_SOCIAL_LOGIN=true"
+      - "--set-env-vars=ALLOW_SOCIAL_REGISTRATION=true"
+
+      # Google OAuth credentials for social login
+      - "--set-secrets=GOOGLE_CLIENT_ID=GOOGLE_CLIENT_ID:latest"
+      - "--set-secrets=GOOGLE_CLIENT_SECRET=GOOGLE_CLIENT_SECRET:latest"
+      - "--set-env-vars=GOOGLE_CALLBACK_URL=/oauth/google/callback"
+
       - "--set-env-vars=APP_TITLE=AIMS AI-Assisted Learning" # Example: set a custom title
-      - "--set-env-vars=CUSTOM_FOOTER=''"
+      - "--set-env-vars=CUSTOM_FOOTER="
 
       - "--set-env-vars=POLICY_JUDGE_ENABLED=true"
       - "--set-env-vars=POLICY_JUDGE_ENDPOINT=google"
